@@ -1,4 +1,4 @@
 # TF-IDF
 TF-IDF calculation using PIG Latin
 
-Loading madeup document to HDFS, calcualting TF-IDF using Pig LATIN.
+Loading madeup documents to HDFS, calcualting TF-IDF using Pig LATIN.
