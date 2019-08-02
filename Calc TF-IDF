@@ -1,0 +1,164 @@
+git remote add origin https://github.com/shafg/TF-IDF.git
+git push -u origin master
+
+#Creating Documents.
+#Doc1:- "hadoop is taking the big data world by storm"
+#Doc2:- "there is a big storm coming this weekend"
+#Doc3:- "data is the new oil" 
+#Doc4:- "how does the weather look like this weekend"
+#Doc5:- "hello world"
+
+#Making documents in Linux---
+[root@sandbox ~]# echo -e "hadoop is taking the big data world by storm" > /root/doct/doc1.txt
+
+[root@sandbox ~]# echo -e "there is a big storm coming this weekend" > /root/doct/doc2.txt
+
+[root@sandbox ~]# echo -e "data is the new oil" > /root/doct/doc3.txt
+
+[root@sandbox ~]# echo -e "how does the weather look like this weekend" > /root/doct/doc4.txt
+
+[root@sandbox ~]# echo -e "hello world" > /root/doct/doc5.txt
+
+doc1 = LOAD '/user/pig/doc1.txt' using PigStorage(',') as (words:chararray);
+doc2 = LOAD '/user/pig/doc2.txt' using PigStorage(',') as (words:chararray);
+doc3 = LOAD '/user/pig/doc3.txt' using PigStorage(',') as (words:chararray);
+doc4 = LOAD '/user/pig/doc4.txt' using PigStorage(',') as (words:chararray);
+doc5 = LOAD '/user/pig/doc5.txt' using PigStorage(',') as (words:chararray);
+
+dw1 = foreach doc1 generate 'doc1.txt' as docID, FLATTEN(TOKENIZE(words)) as word;
+
+dw2 = foreach doc2 generate 'doc2.txt' as docID, FLATTEN(TOKENIZE(words)) as word;
+
+dw3 = foreach doc3 generate 'doc3.txt' as docID, FLATTEN(TOKENIZE(words)) as word;
+
+dw4 = foreach doc4 generate 'doc4.txt' as docID, FLATTEN(TOKENIZE(words)) as word;
+
+dw5 = foreach doc5 generate 'doc5.txt' as docID, FLATTEN(TOKENIZE(words)) as word;
+
+docstr = UNION dw1,
+ dw2,
+ dw3,
+ dw4,
+ dw5;
+dump docstr;
+B = group docstr by (word, docID);
+
+##counting the single frequency of words in documents--
+R1 = FOREACH B GENERATE
+group as wordDoc,
+COUNT(docstr) AS wordCount;
+
+C = GROUP R1 BY wordDoc.docID;
+WW = GROUP C ALL;
+C2 = FOREACH WW GENERATE
+        FLATTEN(C),
+        COUNT(C) AS totalDocs;
+
+R2 = FOREACH C2 GENERATE
+           FLATTEN(R1),
+           SUM(R1.wordCount) AS wordCountPerDoc,
+          totalDocs;
+D = GROUP R2 BY wordDoc.word;
+D2 = FOREACH D GENERATE
+        FLATTEN(R2),
+        COUNT(R2) AS docCountPerWord;
+
+##individual term frequency calculation--
+R3 = FOREACH D2 GENERATE
+          $0.word AS word,
+          $0.docID AS docID,
+((double)wordCount/ (double)wordCountPerDoc) AS term_freq;
+
+E = GROUP R3 BY word;
+##display term frequencies--
+R4 = FOREACH E GENERATE
+                    FLATTEN(R3) AS (docID, word, term_freq);
+DUMP R4;
+
+(a,doc2.txt,0.125)
+(by,doc1.txt,0.1111111111111111)
+(is,doc3.txt,0.2)
+(is,doc1.txt,0.1111111111111111)
+(is,doc2.txt,0.125)
+(big,doc1.txt,0.1111111111111111)
+(big,doc2.txt,0.125)
+(how,doc4.txt,0.125)
+(new,doc3.txt,0.2)
+(oil,doc3.txt,0.2)
+(the,doc1.txt,0.1111111111111111)
+(the,doc3.txt,0.2)
+(the,doc4.txt,0.125)
+(data,doc3.txt,0.2)
+(data,doc1.txt,0.1111111111111111)
+(does,doc4.txt,0.125)
+(like,doc4.txt,0.125)
+(look,doc4.txt,0.125)
+(this,doc2.txt,0.125)
+(this,doc4.txt,0.125)
+(hello,doc5.txt,0.5)
+(storm,doc2.txt,0.125)
+(storm,doc1.txt,0.1111111111111111)
+(there,doc2.txt,0.125)
+(world,doc1.txt,0.1111111111111111)
+(world,doc5.txt,0.5)
+(coming,doc2.txt,0.125)
+(hadoop,doc1.txt,0.1111111111111111)
+(taking,doc1.txt,0.1111111111111111)
+(weather,doc4.txt,0.125)
+(weekend,doc2.txt,0.125)
+(weekend,doc4.txt,0.125)
+
+OR
+
+E = GROUP R3 BY word;
+R4 = FOREACH E GENERATE
+                    FLATTEN(R3) AS (docID, word, term_freq),
+                    COUNT(R3)   AS numdocword;
+##No. of Total Doc. = 5
+
+tfidf = FOREACH R4 {
+              idf    = LOG((double)5/(double)numdocword);
+              tf_idf = (double)term_freq*idf;
+                GENERATE
+                  docID AS docID,
+                  word  AS word,
+                  tf_idf AS tf_idf
+                ;
+             };
+
+(a,doc2.txt,0.20117973905426254)
+(by,doc1.txt,0.17882643471490003)
+(is,doc3.txt,0.10216512475319815)
+(is,doc1.txt,0.05675840264066563)
+(is,doc2.txt,0.06385320297074884)
+(big,doc1.txt,0.10181008131935056)
+(big,doc2.txt,0.11453634148426939)
+(how,doc4.txt,0.20117973905426254)
+(new,doc3.txt,0.3218875824868201)
+(oil,doc3.txt,0.3218875824868201)
+(the,doc1.txt,0.05675840264066563)
+(the,doc3.txt,0.10216512475319815)
+(the,doc4.txt,0.06385320297074884)
+(data,doc3.txt,0.18325814637483104)
+(data,doc1.txt,0.10181008131935056)
+(does,doc4.txt,0.20117973905426254)
+(like,doc4.txt,0.20117973905426254)
+(look,doc4.txt,0.20117973905426254)
+(this,doc2.txt,0.11453634148426939)
+(this,doc4.txt,0.11453634148426939)
+(hello,doc5.txt,0.8047189562170501)
+(storm,doc2.txt,0.11453634148426939)
+(storm,doc1.txt,0.10181008131935056)
+(there,doc2.txt,0.20117973905426254)
+(world,doc1.txt,0.10181008131935056)
+(world,doc5.txt,0.45814536593707755)
+(coming,doc2.txt,0.20117973905426254)
+(hadoop,doc1.txt,0.17882643471490003)
+(taking,doc1.txt,0.17882643471490003)
+(weather,doc4.txt,0.20117973905426254)
+(weekend,doc2.txt,0.11453634148426939)
+(weekend,doc4.txt,0.11453634148426939)
+
+
+
+
