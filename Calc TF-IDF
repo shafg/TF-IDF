@@ -1,6 +1,3 @@
-git remote add origin https://github.com/shafg/TF-IDF.git
-git push -u origin master
-
 #Creating Documents.
 #Doc1:- "hadoop is taking the big data world by storm"
 #Doc2:- "there is a big storm coming this weekend"
